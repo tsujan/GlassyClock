@@ -24,3 +24,6 @@ And if you want to install it, do
 ```sh
 sudo make install
 ```
+## Screenshot
+
+![GlassyClock](GlassyClock.png?raw=true "GlassyClock")
