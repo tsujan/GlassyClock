@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
 
   QApplication app(argc, argv);
   app.setApplicationName(name);
+  app.setQuitOnLastWindowClosed(false);
   handleQuitSignals({SIGQUIT, SIGINT, SIGTERM, SIGHUP});
 
   if (argc > 1) {
