@@ -34,6 +34,7 @@ public:
   ~GClock();
 
   QSize sizeHint() const override;
+  QScreen *currentTargetScreen() const;
 
 protected:
   void paintEvent(QPaintEvent *event) override;

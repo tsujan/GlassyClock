@@ -61,6 +61,10 @@ GClock::~GClock() {
     KWindowEffects::enableBlurBehind(win, false);
 }
 
+QScreen *GClock::currentTargetScreen() const {
+  return targetScreen_;
+}
+
 void GClock::updateClock() {
   // ensure that the clock remains accurate within 250 milliseconds (also see paintEvent)
   int msec = QTime::currentTime().msec();
