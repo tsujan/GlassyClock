@@ -34,11 +34,11 @@
 
 namespace GlassyClock {
 
-GClock::GClock(int size, const QPoint pos, const QString &screenName , QWidget *parent)
+GClock::GClock(int size, const QPoint pos, QScreen *targetScreen, QWidget *parent)
   : QWidget(parent),
     size_(size),
     pos_(pos),
-    screenName_(screenName) {
+    targetScreen_(targetScreen) {
   /* WARNING: Setting "Qt::WindowDoesNotAcceptFocus" might disable
               global shortcuts if no other window is focused. */
   setWindowFlags(Qt::WindowTransparentForInput | Qt::FramelessWindowHint);
@@ -181,37 +181,17 @@ void GClock::showEvent(QShowEvent *event) {
     winId();
     if (QWindow* win = windowHandle()) {
       if (LayerShellQt::Window* layershell = LayerShellQt::Window::get(win)) {
+
         layershell->setLayer(LayerShellQt::Window::Layer::LayerBottom);
-        LayerShellQt::Window::Anchors anchors = {LayerShellQt::Window::AnchorTop
-                                                 | LayerShellQt::Window::AnchorLeft};
-        layershell->setAnchors(anchors);
+        layershell->setAnchors({LayerShellQt::Window::AnchorTop
+                                | LayerShellQt::Window::AnchorLeft});
         layershell->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
         layershell->setExclusiveZone(-1);
         layershell->setScope(QStringLiteral("glassyclock"));
 
         // screen
-        QScreen *_screen = nullptr;
-        auto screens = QGuiApplication::screens();
-        if (!screenName_.isEmpty()) {
-          for (const auto &screen : std::as_const(screens)) {
-            if (screen->name() == screenName_) {
-              _screen = screen;
-              break;
-            }
-          }
-        }
-        if (_screen == nullptr && !screens.isEmpty()) {
-          // find the leftmost or topmost screen
-          std::sort(screens.begin(), screens.end(), [](QScreen *a1, QScreen *a2) {
-            QPoint p1(a1->geometry().topLeft());
-            QPoint p2(a2->geometry().topLeft());
-            return (qAbs(p1.x() - p2.x()) > qAbs(p1.y() - p2.y()) ? p1.x() < p2.x()
-                                                                  : p1.y() < p2.y());
-          });
-          _screen = screens.at(0);
-        }
-        if (_screen != nullptr) {
-          win->setScreen(_screen);
+        if (targetScreen_ != nullptr) {
+          win->setScreen(targetScreen_);
           layershell->setScreenConfiguration(LayerShellQt::Window::ScreenConfiguration::ScreenFromQWindow);
         }
 

@@ -21,8 +21,38 @@
 #include <QApplication>
 #include <QPoint>
 #include <QTextStream>
+#include <QGuiApplication>
+#include <QScreen>
 
 #include "glassyclock.h"
+
+QScreen* getTargetScreen(QString screenName) {
+  // Qt adds placeholder screens when no real screen is present
+  auto screens = QGuiApplication::screens();
+  screens.removeIf([](QScreen *screen) {
+    QRect geom = screen->geometry();
+    return geom.width() <= 0 || geom.height() <= 0;
+  });
+
+  if (screens.isEmpty())
+    return nullptr;
+
+  if (!screenName.isEmpty()) {
+    for (const auto &screen : screens)
+      if (screen->name() == screenName)
+        return screen;
+    return nullptr;
+  }
+
+  // Find the leftmost or topmost screen when no specific screen is requested
+  std::sort(screens.begin(), screens.end(), [](QScreen *a1, QScreen *a2) {
+    QPoint p1(a1->geometry().topLeft());
+    QPoint p2(a2->geometry().topLeft());
+    return (qAbs(p1.x() - p2.x()) > qAbs(p1.y() - p2.y()) ? p1.x() < p2.x()
+                                                          : p1.y() < p2.y());
+  });
+  return screens.at(0);
+}
 
 void handleQuitSignals(const std::vector<int>& quitSignals) {
   auto handler = [](int sig) ->void {
@@ -77,7 +107,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  GlassyClock::GClock clock(s, p, screenName);
+  GlassyClock::GClock clock(s, p, getTargetScreen(screenName));
   clock.show();
   return app.exec();
 }

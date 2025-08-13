@@ -30,7 +30,7 @@ class GClock : public QWidget {
   Q_OBJECT
 
 public:
-  GClock(int size = 0, const QPoint pos = QPoint(-1, -1), const QString &screenName = QString(), QWidget *parent = nullptr);
+  GClock(int size = 0, const QPoint pos = QPoint(-1, -1), QScreen *targetScreen = nullptr, QWidget *parent = nullptr);
   ~GClock();
 
   QSize sizeHint() const override;
@@ -46,7 +46,7 @@ private slots:
 private:
   int size_;
   QPoint pos_;
-  QString screenName_;
+  QScreen *targetScreen_;
   QSvgRenderer *renderer_;
   QTimer *timer_;
 };
