@@ -21,8 +21,62 @@
 #include <QApplication>
 #include <QPoint>
 #include <QTextStream>
+#include <QGuiApplication>
+#include <QScreen>
 
 #include "glassyclock.h"
+
+// Global variables for screen monitoring
+std::unique_ptr<GlassyClock::GClock> g_clock;
+int g_size = 0;
+QPoint g_pos(-1, -1);
+QString g_screenName;
+
+QScreen* getTargetScreen(QString screenName) {
+  // Qt adds placeholder screens when no real screen is present
+  auto screens = QGuiApplication::screens();
+  screens.removeIf([](QScreen *screen) {
+    QRect geom = screen->geometry();
+    return geom.width() <= 0 || geom.height() <= 0;
+  });
+
+  if (screens.isEmpty())
+    return nullptr;
+
+  if (!screenName.isEmpty()) {
+    for (const auto &screen : screens)
+      if (screen->name() == screenName)
+        return screen;
+    return nullptr;
+  }
+
+  // Find the leftmost or topmost screen when no specific screen is requested
+  std::sort(screens.begin(), screens.end(), [](QScreen *a1, QScreen *a2) {
+    QPoint p1(a1->geometry().topLeft());
+    QPoint p2(a2->geometry().topLeft());
+    return (qAbs(p1.x() - p2.x()) > qAbs(p1.y() - p2.y()) ? p1.x() < p2.x()
+                                                          : p1.y() < p2.y());
+  });
+  return screens.at(0);
+}
+
+void onScreenChanged(QScreen *screen) {
+  Q_UNUSED(screen);
+  QScreen* targetScreen = getTargetScreen(g_screenName);
+
+  if (g_clock && targetScreen == g_clock->currentTargetScreen())
+    return;
+
+  if (g_clock) {
+    g_clock->hide();
+    g_clock.reset();
+  }
+
+  if (targetScreen != nullptr) {
+    g_clock = std::make_unique<GlassyClock::GClock>(g_size, g_pos, targetScreen);
+    g_clock->show();
+  }
+}
 
 void handleQuitSignals(const std::vector<int>& quitSignals) {
   auto handler = [](int sig) ->void {
@@ -53,31 +107,33 @@ int main(int argc, char *argv[]) {
 
   QApplication app(argc, argv);
   app.setApplicationName(name);
+  app.setQuitOnLastWindowClosed(false);
   handleQuitSignals({SIGQUIT, SIGINT, SIGTERM, SIGHUP});
 
-  int s = 0;
-  QPoint p(-1, -1);
-  QString screenName;
   if (argc > 1) {
     bool ok;
     int n = firstArg.toInt(&ok);
     if (ok) {
-      s = n;
+      g_size = n;
       if (argc > 3) {
         n = QString::fromUtf8(argv[2]).toInt(&ok);
         if (ok) {
-          p.setX(n);
+          g_pos.setX(n);
           n = QString::fromUtf8(argv[3]).toInt(&ok);
           if (ok)
-            p.setY(n);
+            g_pos.setY(n);
         }
         if (argc > 4) {
-          screenName = QString::fromUtf8(argv[4]);
+          g_screenName = QString::fromUtf8(argv[4]);
         }
       }
     }
   }
-  GlassyClock::GClock clock(s, p, screenName);
-  clock.show();
+
+  QObject::connect(qobject_cast<QGuiApplication*>(&app), &QGuiApplication::screenAdded, onScreenChanged);
+  QObject::connect(qobject_cast<QGuiApplication*>(&app), &QGuiApplication::screenRemoved, onScreenChanged);
+
+  // We don't get any event for the intial screens it seems, just trigger it once
+  onScreenChanged(nullptr);
   return app.exec();
 }
