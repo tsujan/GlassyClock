@@ -23,6 +23,7 @@
 #include <QWidget>
 #include <QSvgRenderer>
 #include <QTimer>
+#include <QScreen>
 
 namespace GlassyClock {
 
@@ -44,6 +45,8 @@ private slots:
   void updateClock();
 
 private:
+  QScreen* getScreen() const;
+
   int size_;
   QPoint pos_;
   QString screenName_;

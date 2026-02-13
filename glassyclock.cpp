@@ -19,11 +19,10 @@
 
 #include "glassyclock.h"
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QPainter>
 #include <QTime>
 #include <QWindow>
-#include <QScreen>
 
 #include <KWindowEffects>
 #include <KWindowSystem>
@@ -54,6 +53,16 @@ GClock::GClock(int size, const QPoint pos, const QString &screenName , QWidget *
   QTimer::singleShot(1000 - QTime::currentTime().msec(), Qt::PreciseTimer, this, [this] {
     timer_->start(1000);
   });
+
+  if (QString::compare(QGuiApplication::platformName(), "wayland", Qt::CaseInsensitive) == 0) {
+    // WARNING: An already visible window is not shown on a new screen under Wayland.
+    connect(qApp, &QGuiApplication::screenAdded, this, [this] (QScreen *newScreen) {
+      if (windowHandle() != nullptr && isVisible() && getScreen() == newScreen) {
+        hide();
+        QTimer::singleShot(0, this, &QWidget::show);
+      }
+    });
+  }
 }
 
 GClock::~GClock() {
@@ -190,26 +199,7 @@ void GClock::showEvent(QShowEvent *event) {
         layershell->setScope(QStringLiteral("glassyclock"));
 
         // screen
-        QScreen *_screen = nullptr;
-        auto screens = QGuiApplication::screens();
-        if (!screenName_.isEmpty()) {
-          for (const auto &screen : std::as_const(screens)) {
-            if (screen->name() == screenName_) {
-              _screen = screen;
-              break;
-            }
-          }
-        }
-        if (_screen == nullptr && !screens.isEmpty()) {
-          // find the leftmost or topmost screen
-          std::sort(screens.begin(), screens.end(), [](QScreen *a1, QScreen *a2) {
-            QPoint p1(a1->geometry().topLeft());
-            QPoint p2(a2->geometry().topLeft());
-            return (qAbs(p1.x() - p2.x()) > qAbs(p1.y() - p2.y()) ? p1.x() < p2.x()
-                                                                  : p1.y() < p2.y());
-          });
-          _screen = screens.at(0);
-        }
+        QScreen *_screen = getScreen();
         if (_screen != nullptr) {
           win->setScreen(_screen);
           layershell->setScreenConfiguration(LayerShellQt::Window::ScreenConfiguration::ScreenFromQWindow);
@@ -231,6 +221,30 @@ void GClock::showEvent(QShowEvent *event) {
     }
   }
   QWidget::showEvent(event);
+}
+
+QScreen* GClock::getScreen() const {
+  QScreen *_screen = nullptr;
+  auto screens = QGuiApplication::screens();
+  if (!screenName_.isEmpty()) {
+    for (const auto &screen : std::as_const(screens)) {
+      if (screen->name() == screenName_) {
+        _screen = screen;
+        break;
+      }
+    }
+  }
+  // find the leftmost or topmost screen
+  if (_screen == nullptr && !screens.isEmpty()) {
+    std::sort(screens.begin(), screens.end(), [](QScreen *a1, QScreen *a2) {
+      QPoint p1(a1->geometry().topLeft());
+      QPoint p2(a2->geometry().topLeft());
+      return (qAbs(p1.x() - p2.x()) > qAbs(p1.y() - p2.y()) ? p1.x() < p2.x()
+                                                            : p1.y() < p2.y());
+    });
+    _screen = screens.at(0);
+  }
+  return _screen;
 }
 
 }
