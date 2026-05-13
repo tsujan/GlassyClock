@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Pedram Pourang (aka Tsu Jan) 2023 <tsujan2000@gmail.com>
+ * Copyright (C) Pedram Pourang (aka Tsu Jan) 2023-2026 <tsujan2000@gmail.com>
  *
  * GlassyClock is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -202,8 +202,11 @@ void GClock::showEvent(QShowEvent *event) {
         QScreen *_screen = getScreen();
         if (_screen != nullptr) {
           win->setScreen(_screen);
-          layershell->setScreenConfiguration(LayerShellQt::Window::ScreenConfiguration::ScreenFromQWindow);
+          layershell->setWantsToBeOnActiveScreen(false);
+          layershell->setScreen(nullptr);
         }
+        else
+          layershell->setWantsToBeOnActiveScreen(true);
 
         // position
         if (pos_.x() >= 0 && pos_.y() >= 0) {
