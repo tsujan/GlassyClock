@@ -6,7 +6,7 @@ GlassyClock is a simple, translucent, Qt-based, analog clock for X11 and Wayland
 
 On X11, it needs compositing. On Wayland, the name of the screen can be added to the command-line. See `glassyclock --help` for options.
 
-GlassyClock uses KWin's blur effect if available and enabled but does not depend on KWin.
+GlassyClock uses KWin's blur effect under X11 (but does not depend on KWin) and the blur effect provided by `ext_background_effect_manager_v1` (through KF) under Wayland if available.
 
 There is no plan for adding GUI options to GlassyClock. If you want to change its appearance, you will need to edit its SVG image and/or code.
 
